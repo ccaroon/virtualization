@@ -1,0 +1,25 @@
+---
+- name: "Provision Image"
+  hosts: all
+  become: yes
+
+  tasks:
+
+    - name: Hello, World
+      debug:
+        msg: Hello, World!
+
+    - name: Install NGinx
+      package:
+        name: nginx
+        state: present
+
+    - name: Enable NGinx
+      service:
+        name: nginx
+        enabled: yes
+
+    - name: Start NGinx
+      service:
+        name: nginx
+        state: started
