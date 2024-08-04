@@ -1,9 +1,9 @@
-source "qemu" "al2023" {
-  qemu_binary = "qemu-system-${local.arch_aliases[var.arch]}"
-  // vm_name           = "tdhtest"
+source "qemu" "image" {
+  qemu_binary = "qemu-system-${var.arch}"
+  vm_name     = "${var.vm_name}.qcow2"
 
-  iso_url      = local.base_image_id
-  iso_checksum = local.base_image_checksum
+  iso_url      = var.base_image.id
+  iso_checksum = var.base_image.checksum
 
   // seed ISO
   cd_label = "cidata"
@@ -12,14 +12,15 @@ source "qemu" "al2023" {
     "user-data" = file("${var.working_dir}/user-data")
   }
 
-  ssh_username         = local.ssh_username
+  ssh_username         = var.ssh_username
   ssh_private_key_file = "~/.ssh/id_rsa"
 
-  efi_firmware_code = "/opt/homebrew/opt/qemu/share/qemu/edk2-aarch64-code.fd"
-  efi_firmware_vars = "/opt/homebrew/opt/qemu/share/qemu/edk2-arm-vars.fd"
+  efi_firmware_code = var.bios.code
+  efi_firmware_vars = var.bios.vars
 
-  accelerator         = "hvf"
+  accelerator         = var.accel
   disk_image          = true
+  disk_size =         var.disk_size
   format              = "qcow2"
   headless            = false
   use_backing_file    = true
@@ -27,8 +28,8 @@ source "qemu" "al2023" {
 
   cpu_model    = "host"
   cpus         = 2
-  machine_type = "virt,highmem=on"
+  machine_type = var.machine_type
   memory       = 4096
 
-  output_directory = "output"
+  output_directory = "${var.working_dir}/image"
 }

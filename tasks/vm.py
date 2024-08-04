@@ -1,6 +1,8 @@
 import os
+
 from invoke import task
 
+import yaml
 import utils
 
 IMAGE_DIR = f"{utils.ROOT_DIR}/images"
@@ -27,17 +29,19 @@ def run(ctx, name, cdrom=None):
     img_arch = image['arch']
     image_url = image['url']
 
-    if not image_url:
-        img_path = name
+    if image_url.startswith("file://"):
+        img_path = image['file']
         img_pid = f"{os.path.basename(img_path)}.pid"
     else:
-        img_pid = f"{name}.pid"
         img_path = f"images/{image['file']}"
+        img_pid = f"{name}.pid"
 
     if not os.path.exists(img_path):
-        raise ValueError(f"Invalid Image: [{name}]")
+        raise FileNotFoundError(f"Image Not Found: [{img_path}]")
 
     # System / Arch specifics
+    # TODO: use utils.qemu_specs()
+    # TODO: need to add accel to machine with above
     bios_file = None
     machine = None
     if utils.host() == "Linux-x86_64":
@@ -58,7 +62,7 @@ def run(ctx, name, cdrom=None):
         f"-bios {bios_file}",
         f"-drive if=virtio,format=qcow2,file={img_path}",
         "-serial stdio",
-        "-netdev user,id=net0,hostfwd=tcp::50022-:22",
+        "-netdev user,id=net0,hostfwd=tcp::50022-:22,hostfwd=tcp::8080-:80",
         f"-device {net_device},netdev=net0",
         f"-pidfile {img_pid}"
     ]
@@ -102,16 +106,20 @@ def name2image(name):
     arch = utils.arch()
     images = IMAGES.get(name)
 
-    if not images:
-        raise ValueError(f"Invalid Image Name: [{name}]")
+    if images:
+        image_url = images.get(arch)
+        image_file = None
 
-    image_url = images.get(arch)
-    image_file = None
-
-    if not image_url:
-        raise ValueError(f"Unknown Architecture: [{arch}]")
+        if not image_url:
+            raise ValueError(f"Unknown Architecture: [{arch}]")
+        else:
+            image_file = os.path.basename(image_url)
     else:
-        image_file = os.path.basename(image_url)
+        if os.path.exists(name):
+            image_url = f"file://{name}"
+            image_file = name
+        else:
+            raise ValueError(f"Invalid Image Name or Path: [{name}]")
 
     return {
         "url": image_url,
