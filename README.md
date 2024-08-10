@@ -20,6 +20,12 @@
 
 ## Stuff
 
+Create empty RAW disk image
+
+```bash
+qemu-img create myimage.raw 50g
+```
+
 Boot from CDROM/ISO with Empty RAW disk image. Useful to install OS onto empty disk.
 ```bash
 qemu-system-x86_64 -m 4G -smp 2 \
