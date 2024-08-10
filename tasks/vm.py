@@ -5,6 +5,10 @@ from invoke import task
 import yaml
 import utils
 
+FORMAT_MAP = {
+    ".img": "raw"
+}
+
 IMAGE_DIR = f"{utils.ROOT_DIR}/images"
 IMAGES = {
     "al2023": {
@@ -19,7 +23,7 @@ IMAGES = {
 
 
 @task
-def run(ctx, name, cdrom=None):
+def run(ctx, name, cdrom=None, boot=None):
     """
     Run the specified VM Image with QEMU.
 
@@ -53,14 +57,18 @@ def run(ctx, name, cdrom=None):
         machine = "virt,accel=hvf,highmem=on"
         net_device = "virtio-net-device"
 
+    img_ext = os.path.splitext(img_path)[1]
+    img_fmt = FORMAT_MAP.get(img_ext, img_ext[1:])
+
     cmd = [
         f"qemu-system-{img_arch}",
         f"-machine {machine}",
         "-cpu host",
-        "-smp 2",
+        "-smp 4",
         "-m 4G",
-        f"-bios {bios_file}",
-        f"-drive if=virtio,format=qcow2,file={img_path}",
+        # TODO: don't really need this?
+        # f"-bios {bios_file}",
+        f"-drive if=virtio,format={img_fmt},file={img_path}",
         "-serial stdio",
         "-netdev user,id=net0,hostfwd=tcp::50022-:22,hostfwd=tcp::8080-:80",
         f"-device {net_device},netdev=net0",
@@ -69,6 +77,9 @@ def run(ctx, name, cdrom=None):
 
     if cdrom:
         cmd.append(f"-drive file={cdrom},media=cdrom,readonly=on")
+
+    if boot:
+        cmd.append(f"-boot once={boot}")
 
     ctx.run(" ".join(cmd), pty=True, echo=True)
 
