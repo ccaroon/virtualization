@@ -18,18 +18,31 @@
 
 
 
-## Stuff
+## Mini How-Tos
 
-Create empty RAW disk image
+### Create empty RAW disk image
 
 ```bash
 qemu-img create myimage.raw 50g
 ```
 
-Boot from CDROM/ISO with Empty RAW disk image. Useful to install OS onto empty disk.
+OR
+
+```bash
+inv build.disk myimage 50g
+```
+
+### Boot from CDROM/ISO with Empty RAW disk image. Useful to install OS onto empty disk.
+
 ```bash
 qemu-system-x86_64 -m 4G -smp 2 \
-    -drive if=virtio,format=raw,file=craig.raw \
-    -drive file=~/Downloads/kubuntu-24.04-desktop-amd64.iso,media=cdrom,readonly=on \
+    -drive if=virtio,format=raw,file=EMPTY-DISK.raw \
+    -drive file=/PATH/TO/IMAGE.iso,media=cdrom,readonly=on \
     -boot d
+```
+
+OR
+
+```bash
+inv vm.run EMPTY-DISK.raw --cdrom /PATH/TO/IMAGE.iso --boot d
 ```
