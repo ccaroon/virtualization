@@ -24,18 +24,19 @@ def image(ctx, image_spec):
         spec = yaml.safe_load(fptr)
 
     # mkdir spec file name - ext
-    # TODO: should be in same dir as spec file not ./
-    image_name = os.path.basename(os.path.splitext(image_spec)[0])
-    if not os.path.exists(image_name):
+    image_dir = os.path.dirname(os.path.abspath(image_spec))
+    image_name = os.path.splitext(os.path.basename(image_spec))[0]
+    image_path = f"{image_dir}/{image_name}"
+    if not os.path.exists(image_path):
         print("=> Make Image Data Dir...")
-        os.mkdir(image_name)
+        os.mkdir(image_path)
 
     # create seed data
     print("=> Create Seed Data...")
-    create_seed_data(image_name, spec['users'], f"./{image_name}")
+    create_seed_data(image_name, spec['users'], image_path)
 
     # create packer vars.json
-    pkr_vars_file = f"./{image_name}/{image_name}.pkrvars.json"
+    pkr_vars_file = f"{image_path}/{image_name}.pkrvars.json"
     pkr_vars_data = {
         "accel": qemu_specs["accel"],
         "arch": utils.arch(),
@@ -45,7 +46,7 @@ def image(ctx, image_spec):
         "machine_type": qemu_specs["machine"],
         "ssh_username": spec['ssh_username'],
         "vm_name": image_name,
-        "working_dir": os.path.abspath(f"./{image_name}")
+        "working_dir": image_path
     }
     pkr_vars_json = json.dumps(pkr_vars_data, indent=2)
     utils.write_file(pkr_vars_file, pkr_vars_json)
@@ -55,6 +56,14 @@ def image(ctx, image_spec):
 
     # run packer build
     ctx.run(f"packer build -var-file {pkr_vars_file} packer")
+
+@task
+def disk(ctx, name, size):
+    """
+    Use `qemu-img` to create an empyt disk image
+    """
+
+    ctx.run(f"qemu-img create {name}.raw {size}")
 
 # @task
 # def seed_data(ctx, hostname="caroon-al2023"):
