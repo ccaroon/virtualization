@@ -2,7 +2,6 @@ import os
 
 from invoke import task
 
-import yaml
 import utils
 
 FORMAT_MAP = {
@@ -22,8 +21,8 @@ IMAGES = {
 }
 
 
-@task
-def run(ctx, name, cdrom=None, boot=None):
+@task(iterable="port")
+def run(ctx, name, cdrom=None, boot=None, port=None):
     """
     Run the specified VM Image with QEMU.
 
@@ -32,6 +31,12 @@ def run(ctx, name, cdrom=None, boot=None):
     image = name2image(name)
     img_arch = image['arch']
     image_url = image['url']
+
+    # Always map 50022 -> 22 (SSH)
+    port_fwds = "hostfwd=tcp::50022-:22"
+    for port_map in port:
+        (host, guest) = port_map.split(":", 2)
+        port_fwds += f",hostfwd=tcp::{host}-:{guest}"
 
     if image_url.startswith("file://"):
         img_path = image['file']
@@ -44,34 +49,23 @@ def run(ctx, name, cdrom=None, boot=None):
         raise FileNotFoundError(f"Image Not Found: [{img_path}]")
 
     # System / Arch specifics
-    # TODO: use utils.qemu_specs()
-    # TODO: need to add accel to machine with above
-    bios_file = None
-    machine = None
-    if utils.host() == "Linux-x86_64":
-        bios_file = "/usr/share/qemu/OVMF.fd"
-        machine = "pc,accel=kvm"
-        net_device = "e1000"
-    elif utils.host().startswith("Darwin-"):
-        bios_file = f"/opt/homebrew/opt/qemu/share/qemu/edk2-{img_arch}-code.fd"
-        machine = "virt,accel=hvf,highmem=on"
-        net_device = "virtio-net-device"
-
+    specs = utils.qemu_specs()
     img_ext = os.path.splitext(img_path)[1]
     img_fmt = FORMAT_MAP.get(img_ext, img_ext[1:])
 
     cmd = [
         f"qemu-system-{img_arch}",
-        f"-machine {machine}",
+        f"-accel {specs['accel']}",
+        f"-machine {specs['machine']}",
         "-cpu host",
         "-smp 4",
         "-m 4G",
         # TODO: don't really need this?
-        # f"-bios {bios_file}",
+        # f"-bios {specs['bios']['code]}",
         f"-drive if=virtio,format={img_fmt},file={img_path}",
         "-serial stdio",
-        "-netdev user,id=net0,hostfwd=tcp::50022-:22,hostfwd=tcp::8080-:80",
-        f"-device {net_device},netdev=net0",
+        f"-netdev user,id=net0,{port_fwds}",
+        f"-device {specs['net_device']},netdev=net0",
         f"-pidfile {img_pid}"
     ]
 
@@ -130,7 +124,7 @@ def name2image(name):
             image_url = f"file://{name}"
             image_file = name
         else:
-            raise ValueError(f"Invalid Image Name or Path: [{name}]")
+            raise FileNotFoundError(f"Invalid Image Name or Path: [{name}]")
 
     return {
         "url": image_url,

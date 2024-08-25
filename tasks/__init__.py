@@ -1,9 +1,11 @@
-from invoke import Collection
+from invoke import task, Collection
 
 import build
 import vm
+import base
 
-namespace = Collection(
-    build,
-    vm
-)
+zvm = Collection("zvm", build, vm)
+zvm.add_task(base.init)
+
+namespace = Collection()
+namespace.add_collection(zvm)

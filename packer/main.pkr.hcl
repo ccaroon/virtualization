@@ -17,13 +17,13 @@ build {
   //   ]
   // }
 
-  // provisioner "ansible" {
-  //   user = var.ssh_username
-  //   // extra_arguments = [
-  //   //   "-vvv",
-  //   // ]
-  //   playbook_file = "./ansible/provision.yml"
-  // }
+  provisioner "ansible" {
+    user = var.ansible.user
+    // extra_arguments = [
+    //   "-vvv",
+    // ]
+    playbook_file = var.ansible.playbook
+  }
 
   // post-processor "vagrant" {
   //   output              = "./output/packer_{{.BuildName}}_{{.Provider}}_{{.Architecture}}.box"

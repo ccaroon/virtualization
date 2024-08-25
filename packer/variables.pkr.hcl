@@ -46,3 +46,10 @@ variable "base_image" {
   })
   description = "Base Image Info"
 }
+
+variable "ansible" {
+  type = object({
+    user = string
+    playbook = string
+  })
+}

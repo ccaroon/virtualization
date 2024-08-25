@@ -15,3 +15,7 @@
 
 ## Done
 ...
+
+
+## Notes
+zombie vombie vmbie vmboy avm zvm cvm xvm vmb vmachine vmi vmgrunt vmbot vmbox vmpc pcvm vvm zvmm zvmm xyzzy xyzvm Zeta VM ovm xvm qvm zvm

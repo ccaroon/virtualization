@@ -19,35 +19,54 @@ def image(ctx, image_spec):
 
     # read image_spec yaml file
     print("=> Parse Image Spec...")
-    spec = None
+    build_spec = None
     with open(image_spec, "r") as fptr:
         spec = yaml.safe_load(fptr)
+        build_spec = spec.get("BUILD")
 
     # mkdir spec file name - ext
     image_dir = os.path.dirname(os.path.abspath(image_spec))
     image_name = os.path.splitext(os.path.basename(image_spec))[0]
-    image_path = f"{image_dir}/{image_name}"
+    image_path = f"{image_dir}"
     if not os.path.exists(image_path):
         print("=> Make Image Data Dir...")
         os.mkdir(image_path)
 
     # create seed data
     print("=> Create Seed Data...")
-    create_seed_data(image_name, spec['users'], image_path)
+    create_seed_data(image_name, build_spec['users'], image_path)
 
     # create packer vars.json
     pkr_vars_file = f"{image_path}/{image_name}.pkrvars.json"
     pkr_vars_data = {
         "accel": qemu_specs["accel"],
         "arch": utils.arch(),
-        "base_image": spec["base_image"],
-        "disk_size": spec.get("disk", {}).get("size", "25G"),
+        "base_image": build_spec["src_image"],
+        "disk_size": build_spec.get("disk", {}).get("size", "25G"),
         "bios": qemu_specs["bios"],
         "machine_type": qemu_specs["machine"],
-        "ssh_username": spec['ssh_username'],
+        "ssh_username": build_spec['ssh_username'],
         "vm_name": image_name,
         "working_dir": image_path
     }
+
+    ansible = build_spec.get("ansible")
+    if ansible:
+        playbook = ansible.get("playbook")
+        if not playbook:
+            raise ValueError("'ansible.playbook' is required!")
+
+        playbook_path = None
+        if os.path.isabs(playbook):
+            playbook_path = playbook
+        else:
+            playbook_path = os.path.abspath(f"{image_dir}/{playbook}")
+
+        pkr_vars_data["ansible"] = {
+            "user": ansible.get("user", build_spec["ssh_username"]),
+            "playbook": playbook_path
+        }
+
     pkr_vars_json = json.dumps(pkr_vars_data, indent=2)
     utils.write_file(pkr_vars_file, pkr_vars_json)
 
@@ -60,7 +79,7 @@ def image(ctx, image_spec):
 @task
 def disk(ctx, name, size):
     """
-    Use `qemu-img` to create an empyt disk image
+    Use `qemu-img` to create an empty disk image
     """
 
     ctx.run(f"qemu-img create {name}.raw {size}")
@@ -123,14 +142,6 @@ def disk(ctx, name, size):
 #     elif platform.system() == "Linux":
 #         ctx.run(f"mkisofs -input-charset utf-8 -output {SEED_ISO} -volid cidata -joliet -rock {SEED_ROOT}/user-data {SEED_ROOT}/meta-data")
 
-
-# @task(pre=[seed_data])
-# def packer(ctx):
-#     """
-#     Build the Image specified in the `packer` dir
-#     """
-#     with ctx.cd(f"{utils.ROOT_DIR}/packer"):
-#         ctx.run("packer build .")
 
 
 # @task

@@ -1,0 +1,32 @@
+---
+################################################################################
+# ** NOTE **
+# After modifying this file you must run `inv vm.init` again in order for the
+# changes to take effect.
+################################################################################
+BUILD:
+  src_image:
+    id: "https://cdn.amazonlinux.com/al2023/os-images/2023.5.20240730.0/kvm/al2023-kvm-2023.5.20240730.0-kernel-6.1-x86_64.xfs.gpt.qcow2"
+    checksum: "0d0424af1d6d52ddf72352a5aea4dd62e85f07526a10148b23d2c7090862e8f2"
+
+  # cdrom: path-to.iso
+
+  users:
+    - ec2-user
+    - ccaroon
+
+  ssh_username: ec2-user
+
+  ansible:
+    playbook: ../ansible/provision.yml
+
+  disk:
+    size: 50G
+
+################################################################################
+RUN:
+  # Port Mappings
+  # NAME:HOST-PORT -> GUEST-PORT
+  port_map:
+    - 50022 -> 22
+    - 8080 -> 80
